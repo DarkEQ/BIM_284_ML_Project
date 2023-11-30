@@ -1,9 +1,9 @@
 import torch
-
 import matplotlib.pyplot as plt
 import numpy as np
-
 from tqdm.auto import tqdm
+from sklearn.model_selection import KFold
+
 
 def validation(model, test_loader, loss_fn, device):
 
@@ -13,8 +13,9 @@ def validation(model, test_loader, loss_fn, device):
     model.eval()
 
     with torch.no_grad():
-        with tqdm(test_loader, unit="batch", total=len(test_loader)) as tbatches:
-            for test_data in tbatches:
+        # with tqdm(enumerate(test_loader), unit="batch", total=len(test_loader)) as tbatches:
+        with tqdm(enumerate(test_loader, 0), unit="batch", total=len(test_loader)) as tbatches:
+            for i, test_data in tbatches:
                 images, labels = test_data[0].to(device), test_data[1].to(device)
                 outputs = model(images)
                 loss = loss_fn(outputs, labels)
@@ -32,8 +33,9 @@ def test_accuracy(model, data_loader, device):
     model.eval()
 
     with torch.no_grad():
-        with tqdm(data_loader, unit="batch", total=len(data_loader)) as tbatches:
-            for test_data in tbatches:
+        # with tqdm(enumerate(data_loader), unit="batch", total=len(data_loader)) as tbatches:
+        with tqdm(enumerate(data_loader, 0), unit="batch", total=len(data_loader)) as tbatches:
+            for i, test_data in tbatches:
                 images, labels = test_data[0].cuda(), test_data[1].cuda()
                 outputs = model(images)
                 _, predicted = torch.max(outputs.data, 1)
@@ -58,7 +60,8 @@ def train(model, loss_fn, optimizer, train_loader, test_loader, num_epochs, devi
         # Set model to train at the start of every epoch
         model.train()
         
-        with tqdm(enumerate(train_loader), unit="batch", total=len(train_loader)) as tepoch:
+        # with tqdm(enumerate(train_loader), unit="batch", total=len(train_loader)) as tepoch:
+        with tqdm(enumerate(train_loader, 0), unit="batch", total=len(train_loader)) as tepoch:
             # Iterate through training dataset
             for i, data in tepoch:
 
@@ -95,12 +98,51 @@ def train(model, loss_fn, optimizer, train_loader, test_loader, num_epochs, devi
         history['training_accuracy'].append(test_accuracy(model=model, data_loader=train_loader, device=device))
 
         print('Epoch [%d/%d] End, Training Loss: %.4f., Validation Loss: %.4f., Training Accuracy: %.2f %%, Validation Accuracy: %.2f %%'
-                            %(epoch+1, num_epochs, 
+                            %(epoch+1, num_epochs,
                             loss.item(), mean_val_loss,
-                            history['training_accuracy'][epoch],
-                            history['validation_accuracy'][epoch]))
+                            history['training_accuracy'][-1],
+                            history['validation_accuracy'][-1]))
         print('--------------------------------------')
     return history
+
+def kFoldCrossValTrain(model, loss_fn, optimizer, dataset, num_epochs, k_folds, device, history):
+    '''
+    Uses K-Fold Cross Validation to train the model.
+    Reference: https://github.com/christianversloot/machine-learning-articles/blob/main/how-to-use-k-fold-cross-validation-with-pytorch.md
+    '''
+    batch_size = history['batch_size']
+    num_workers = history['num_workers']
+
+    # Define the K-Fold Cross Validator
+    kfold = KFold(n_splits=k_folds, shuffle=True)
+
+    for fold, (train_ids, val_ids) in enumerate(kfold.split(dataset)):
+
+        print(f'FOLD {fold}')
+        print('---------------------------------------')
+
+        # Sample elements randomly from a given list of ids, no replacements.
+        train_subsampler = torch.utils.data.SubsetRandomSampler(train_ids)
+        val_subsampler = torch.utils.data.SubsetRandomSampler(val_ids)
+
+        # Define data loaders for training and validation sets this fold
+        kfold_train_loader = torch.utils.data.DataLoader(dataset, sampler=train_subsampler, 
+                                                         batch_size=batch_size, 
+                                                         pin_memory=True,
+                                                         num_workers=num_workers,
+                                                         persistent_workers=True)
+        
+        kfold_val_loader = torch.utils.data.DataLoader(dataset, sampler=val_subsampler, 
+                                                       batch_size=batch_size)
+
+        # Train the model
+        hist = train(model=model, loss_fn=loss_fn, optimizer=optimizer, 
+                train_loader=kfold_train_loader, test_loader=kfold_val_loader, 
+                num_epochs=num_epochs, device = device, history=history)
+
+    return hist
+
+
 
 def plot_learning_curve(history):
     plt.figure(figsize=(12, 6))
@@ -114,7 +156,7 @@ def plot_learning_curve(history):
     if history['momentum'] != None:
         plt.suptitle('Model: %s, Batch Size: %i, LR: %.5f, Mo: %.4f, Optimizer: %s' %(history['model'], history['batch_size'], history['learning_rate'], history['momentum'], history['optimizer']))
     else:
-        plt.suptitle('Model: %s, Batch Size: %i, LR: %.5f, Mo: %.4f, Optimizer: %s' %(history['model'], history['batch_size'], history['learning_rate'], history['optimizer']))
+        plt.suptitle('Model: %s, Batch Size: %i, LR: %.5f, Optimizer: %s' %(history['model'], history['batch_size'], history['learning_rate'], history['optimizer']))
     plt.title('Loss vs. Iteration')
 
     plt.subplot(2, 1, 2)
