@@ -108,10 +108,13 @@ def plot_learning_curve(history):
     plt.subplot(2, 1, 1)
     plt.plot(history['training_loss'], label='training loss')
     plt.plot(history['validation_loss'], label='validation loss')
-    plt.xlabel('Iteration (every 100 batches)')
+    plt.xlabel('Iteration')
     plt.ylabel('Loss')
     plt.legend()
-    plt.suptitle('Model: %s, Batch Size: %i, LR: %.4f, Mo: %.4f, Optimizer: %s' %(history['model'], history['batch_size'], history['learning_rate'], history['momentum'], history['optimizer']))
+    if history['momentum'] != None:
+        plt.suptitle('Model: %s, Batch Size: %i, LR: %.5f, Mo: %.4f, Optimizer: %s' %(history['model'], history['batch_size'], history['learning_rate'], history['momentum'], history['optimizer']))
+    else:
+        plt.suptitle('Model: %s, Batch Size: %i, LR: %.5f, Mo: %.4f, Optimizer: %s' %(history['model'], history['batch_size'], history['learning_rate'], history['optimizer']))
     plt.title('Loss vs. Iteration')
 
     plt.subplot(2, 1, 2)
@@ -120,6 +123,7 @@ def plot_learning_curve(history):
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
     plt.legend()
+    plt.grid(axis='y')
     # plt.suptitle('Model: %s, Batch Size: %i, LR: %.4f, Optimizer: %s' %(history['model'], history['batch_size'], history['learning_rate'], history['optimizer']))
     plt.title('Accuracy vs. Epoch')
 
