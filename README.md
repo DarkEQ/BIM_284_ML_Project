@@ -1,13 +1,13 @@
-# mini_project_b3_asidher
+# BIM 284 Machine Learning Project
 By Abhijaat Sidher
 
 # Files for grading:
 
-- "Lab_B3.ipynb"
+- "main.ipynb"
     Contains the main program, results, and the discussion notes.
 
 - "ml_library.py"
-    Contains the programs from previous labs to train, validate, and plot. File is loaded as `ML` and methods are called within "Lab_B3.ipynb".
+    Contains the programs from previous labs to train, validate, and plot. File is loaded as `ML` and methods are called within "Main.ipynb".
 
 - "model/resnet50_model_87p.pth"
     The ResNet50 model that achieved 87% accuracy against the test dataset (found in "data/test/")
